@@ -1,0 +1,43 @@
+# Git files
+.git
+.gitignore
+
+# Documentation
+README.md
+DOCKER_README.md
+*.md
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node modules (if any)
+node_modules/
+
+# Backup files
+*.bak
+*.backup
+
+# Lab request logs
+labs/*.txt
+
+# Docker files (not needed in container)
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Scripts
+start.sh
+stop.sh 

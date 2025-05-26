@@ -42,19 +42,25 @@ function check_input($value, $con) {
 // Function to safely log requests
 function log_request($message) {
     $log_file = __DIR__ . '/lab3_requests.txt';
-    // Ensure the log file exists and is writable
+    
+    // Try to create the file if it doesn't exist
     if (!file_exists($log_file)) {
-        touch($log_file);
-        chmod($log_file, 0666);
+        $fp = @fopen($log_file, 'w');
+        if ($fp) {
+            fclose($fp);
+            @chmod($log_file, 0666);
+        }
     }
     
-    if (is_writable($log_file)) {
-        $fp = fopen($log_file, 'a');
+    // Try to write to the log file
+    if (is_writable(dirname($log_file))) {
+        $fp = @fopen($log_file, 'a');
         if ($fp) {
             fwrite($fp, $message . "\n");
             fclose($fp);
         }
     }
+    // Silently fail if we can't write to the log file
 }
 
 // Handle session creation

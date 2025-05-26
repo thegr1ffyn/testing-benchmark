@@ -1,5 +1,12 @@
 <?php
-session_start();
+// Define manual middleware control to prevent auto-redirect
+define('AUTH_MIDDLEWARE_MANUAL', true);
+
+// Include authentication middleware
+require_once 'config/auth_middleware.php';
+
+// Initialize middleware for guest-only page
+AuthMiddleware::init('guest');
 
 // Database configuration
 $host = $_ENV['DB_HOST'] ?? 'database';
@@ -15,6 +22,11 @@ if (!$con) {
 
 $error_message = '';
 
+// Check for session expiration
+if (isset($_GET['expired']) && $_GET['expired'] == '1') {
+    $error_message = 'Your session has expired. Please login again.';
+}
+
 // Handle login
 if (isset($_POST['login'])) {
     $username = $_POST['username'];
@@ -26,8 +38,10 @@ if (isset($_POST['login'])) {
         
         if ($result && mysqli_num_rows($result) > 0) {
             $user = mysqli_fetch_array($result);
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
+            
+            // Use middleware to handle login
+            AuthMiddleware::login($user);
+            
             header('Location: dashboard.php');
             exit();
         } else {

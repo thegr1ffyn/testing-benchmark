@@ -1,13 +1,16 @@
 <?php
-session_start();
+// Define manual middleware control
+define('AUTH_MIDDLEWARE_MANUAL', true);
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: index.php');
-    exit();
-}
+// Include authentication middleware
+require_once 'config/auth_middleware.php';
 
-$username = $_SESSION['username'];
+// Initialize middleware for protected page
+AuthMiddleware::init('protected');
+
+// Get user information
+$user = AuthMiddleware::getUser();
+$username = $user['username'];
 ?>
 
 <!DOCTYPE html>
@@ -165,6 +168,18 @@ $username = $_SESSION['username'];
         <div class="welcome-section">
             <h2>Welcome to the IT Administration Portal</h2>
             <p>Access our comprehensive suite of database management and user administration tools. Select a category below to begin working with our enterprise systems.</p>
+            <?php
+            if ($user && $user['login_time']) {
+                $session_duration = time() - $user['login_time'];
+                $remaining_time = 3600 - $session_duration; // 1 hour - elapsed time
+                if ($remaining_time > 0) {
+                    $hours = floor($remaining_time / 3600);
+                    $minutes = floor(($remaining_time % 3600) / 60);
+                    echo '<p style="color: #666; font-size: 14px; margin-top: 15px;">Session expires in: ' . 
+                         ($hours > 0 ? $hours . 'h ' : '') . $minutes . 'm</p>';
+                }
+            }
+            ?>
         </div>
         
         <div class="vulnerability-grid">

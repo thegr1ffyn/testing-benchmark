@@ -38,17 +38,18 @@ COPY docker/php.ini /usr/local/etc/php/php.ini
 # Copy custom Apache configuration
 COPY docker/apache-config.conf /etc/apache2/sites-available/000-default.conf
 
-# Set proper permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
+# Copy startup script
+COPY docker/startup.sh /usr/local/bin/startup.sh
+RUN chmod +x /usr/local/bin/startup.sh
 
-# Create logs directory
+# Create necessary directories and set basic permissions
 RUN mkdir -p /var/www/html/logs \
-    && chown -R www-data:www-data /var/www/html/logs \
-    && chmod -R 777 /var/www/html/logs
+    && mkdir -p /var/www/html/labs \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
 
 # Expose port 80
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"] 
+# Start with our custom startup script
+CMD ["/usr/local/bin/startup.sh"] 

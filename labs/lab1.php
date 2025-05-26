@@ -1,11 +1,6 @@
 <?php
-session_start();
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../index.php');
-    exit();
-}
+// Include authentication middleware
+require_once '../config/auth_middleware.php';
 
 // Database configuration
 $host = $_ENV['DB_HOST'] ?? 'database';
@@ -19,7 +14,9 @@ if (!$con) {
     die('Connection failed: ' . mysqli_connect_error());
 }
 
-$username = $_SESSION['username'];
+// Get user information (middleware auto-protects this page)
+$user = AuthMiddleware::getUser();
+$username = $user['username'];
 $result_message = '';
 $user_data = null;
 

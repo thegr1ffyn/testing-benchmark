@@ -1,13 +1,10 @@
 <?php
-session_start();
+// Include authentication middleware
+require_once '../config/auth_middleware.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../index.php');
-    exit();
-}
-
-$username = $_SESSION['username'];
+// Get user information (middleware auto-protects this page)
+$user = AuthMiddleware::getUser();
+$username = $user['username'];
 $search_query = '';
 $search_results = [];
 
@@ -16,9 +13,14 @@ if (isset($_GET['search'])) {
     $search_query = $_GET['search'];
     
     // Log the request for analysis
-    $fp = fopen('xss1_requests.txt', 'a');
-    fwrite($fp, 'Search: ' . $search_query . " - User: " . $username . " - Time: " . date('Y-m-d H:i:s') . "\n");
-    fclose($fp);
+    $log_file = __DIR__ . '/xss1_requests.txt';
+    if (is_writable(dirname($log_file))) {
+        $fp = @fopen($log_file, 'a');
+        if ($fp) {
+            fwrite($fp, 'Search: ' . $search_query . " - User: " . $username . " - Time: " . date('Y-m-d H:i:s') . "\n");
+            fclose($fp);
+        }
+    }
     
     // Simulate search results (vulnerable to XSS - no filtering)
     if (!empty($search_query)) {

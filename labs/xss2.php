@@ -1,13 +1,10 @@
 <?php
-session_start();
+// Include authentication middleware
+require_once '../config/auth_middleware.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../index.php');
-    exit();
-}
-
-$username = $_SESSION['username'];
+// Get user information (middleware auto-protects this page)
+$user = AuthMiddleware::getUser();
+$username = $user['username'];
 $comment = '';
 $comment_submitted = false;
 

@@ -72,24 +72,41 @@ class AuthMiddleware {
             'sql-challenges', 
             'xss-challenges',
             'session_test',
+            'middleware_test',
             'lab1', 'lab2', 'lab3',
             'xss1', 'xss2', 'xss3', 'xss3_log'
         ];
         
-        // Pages that should redirect authenticated users
+        // Pages that should redirect authenticated users to dashboard
         $guest_only_pages = [
             'index'
         ];
         
-        // Check if current page requires authentication
-        if (in_array($current_page, $protected_pages)) {
-            self::requireAuth();
+        // First check guest-only pages (login page)
+        if (in_array($current_page, $guest_only_pages)) {
+            if ($is_authenticated) {
+                // Authenticated user trying to access login page -> redirect to dashboard
+                $redirect_path = self::getRedirectPath('dashboard.php');
+                header('Location: ' . $redirect_path);
+                exit();
+            }
+            // Not authenticated user on login page -> allow access
+            return;
         }
         
-        // Check if current page should redirect authenticated users
-        if (in_array($current_page, $guest_only_pages)) {
-            self::requireGuest();
+        // Then check protected pages
+        if (in_array($current_page, $protected_pages)) {
+            if (!$is_authenticated) {
+                // Not authenticated user trying to access protected page -> redirect to login
+                $redirect_path = self::getRedirectPath('index.php');
+                header('Location: ' . $redirect_path);
+                exit();
+            }
+            // Authenticated user on protected page -> allow access
+            return;
         }
+        
+        // Page is neither protected nor guest-only -> allow access
     }
     
     /**
@@ -163,10 +180,20 @@ class AuthMiddleware {
         // Handle different page types
         switch ($page_type) {
             case 'protected':
-                self::requireAuth();
+                // Manually require authentication
+                if (!self::isAuthenticated()) {
+                    $redirect_path = self::getRedirectPath('index.php');
+                    header('Location: ' . $redirect_path);
+                    exit();
+                }
                 break;
             case 'guest':
-                self::requireGuest();
+                // Manually require guest (redirect authenticated users)
+                if (self::isAuthenticated()) {
+                    $redirect_path = self::getRedirectPath('dashboard.php');
+                    header('Location: ' . $redirect_path);
+                    exit();
+                }
                 break;
             case 'auto':
             default:

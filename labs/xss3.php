@@ -16,7 +16,7 @@ $username = $_SESSION['username'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Internal Communication Hub</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <!-- CSP disabled for enhanced functionality -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -294,19 +294,18 @@ $username = $_SESSION['username'];
         // Update current URL display
         document.getElementById('current-url').textContent = window.location.href;
         
-        // Advanced input filtering function
+        // Weak input filtering function (easily bypassable)
         function sanitizeInput(input) {
-            // Advanced filtering - can still be bypassed with DOM manipulation
+            // Weak filtering - multiple bypass opportunities
             let filtered = input;
             
-            // Remove common XSS patterns
-            filtered = filtered.replace(/<script[^>]*>.*?<\/script>/gi, '');
-            filtered = filtered.replace(/javascript:/gi, '');
-            filtered = filtered.replace(/on\w+\s*=/gi, '');
-            filtered = filtered.replace(/<iframe[^>]*>.*?<\/iframe>/gi, '');
-            filtered = filtered.replace(/<object[^>]*>.*?<\/object>/gi, '');
-            filtered = filtered.replace(/<embed[^>]*>/gi, '');
+            // Only remove exact matches (case sensitive)
+            filtered = filtered.replace(/<script>/g, '');
+            filtered = filtered.replace(/<\/script>/g, '');
+            filtered = filtered.replace(/javascript:/g, '');
+            filtered = filtered.replace(/onclick=/g, '');
             
+            // Missing many XSS vectors intentionally
             return filtered;
         }
         
@@ -321,10 +320,24 @@ $username = $_SESSION['username'];
             
             let message = messageInput.value;
             
-            // Log the message (for analysis)
-            console.log('Message sent:', message);
+            // Log the message for analysis
+            const logData = {
+                message: message,
+                user: '<?php echo $username; ?>',
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent
+            };
             
-            // Apply "advanced" filtering
+            // Send log to server (vulnerable endpoint)
+            fetch('xss3_log.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            }).catch(() => {}); // Ignore errors
+            
+            // Apply weak filtering
             message = sanitizeInput(message);
             
             // Set timestamp
@@ -345,19 +358,90 @@ $username = $_SESSION['username'];
             return false;
         }
         
-        // Check for URL parameters and auto-populate (DOM XSS vector)
-        window.onload = function() {
+        // Process URL parameters (DOM XSS vector)
+        function processUrlParams() {
             const urlParams = new URLSearchParams(window.location.search);
             const messageParam = urlParams.get('message');
+            const autoSend = urlParams.get('auto');
             
             if (messageParam) {
-                document.getElementById('message').value = decodeURIComponent(messageParam);
-                // Auto-send if message parameter is present
-                setTimeout(() => {
-                    sendMessage({ preventDefault: () => {} });
-                }, 500);
+                // Decode and set message (vulnerable)
+                const decodedMessage = decodeURIComponent(messageParam);
+                document.getElementById('message').value = decodedMessage;
+                
+                // Auto-send if auto parameter is present
+                if (autoSend === 'true') {
+                    setTimeout(() => {
+                        sendMessage({ preventDefault: () => {} });
+                    }, 500);
+                }
             }
+            
+            // Process theme parameter (additional XSS vector)
+            const themeParam = urlParams.get('theme');
+            if (themeParam) {
+                // Vulnerable: directly inject CSS
+                const style = document.createElement('style');
+                style.innerHTML = themeParam;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Enhanced message processing with eval vulnerability
+        function processAdvancedMessage(msg) {
+            // Dangerous: eval-based processing for "advanced features"
+            if (msg.startsWith('calc:')) {
+                try {
+                    const expression = msg.substring(5);
+                    const result = eval(expression); // VULNERABLE!
+                    return 'Calculation result: ' + result;
+                } catch (e) {
+                    return 'Invalid calculation';
+                }
+            }
+            
+            // Process "commands" (another XSS vector)
+            if (msg.startsWith('cmd:')) {
+                const command = msg.substring(4);
+                // Simulate command processing with innerHTML
+                const cmdDiv = document.createElement('div');
+                cmdDiv.innerHTML = 'Executing: ' + command; // VULNERABLE!
+                return cmdDiv.innerHTML;
+            }
+            
+            return msg;
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            processUrlParams();
+            
+            // Add advanced message processing
+            const originalSendMessage = sendMessage;
+            window.sendMessage = function(event) {
+                if (event) event.preventDefault();
+                
+                const messageInput = document.getElementById('message');
+                let message = messageInput.value;
+                
+                // Process advanced features
+                message = processAdvancedMessage(message);
+                messageInput.value = message;
+                
+                return originalSendMessage(event);
+            };
         };
+        
+        // Add postMessage listener for additional attack surface
+        window.addEventListener('message', function(event) {
+            // Vulnerable: trust any origin
+            if (event.data && event.data.type === 'setMessage') {
+                document.getElementById('message').value = event.data.content;
+                if (event.data.autoSend) {
+                    sendMessage({ preventDefault: () => {} });
+                }
+            }
+        });
     </script>
 </body>
 </html> 

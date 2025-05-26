@@ -3,14 +3,12 @@
 # Create labs directory if it doesn't exist
 mkdir -p /var/www/html/labs
 
-# Create log files with proper permissions
-touch /var/www/html/labs/lab1_requests.txt
-touch /var/www/html/labs/lab2_requests.txt
-touch /var/www/html/labs/lab3_requests.txt
-touch /var/www/html/labs/xss1_requests.txt
-touch /var/www/html/labs/xss2_requests.txt
+# Create all lab log files with proper permissions
+for lab in lab1 lab2 lab3 xss1 xss2 xss3; do
+    touch "/var/www/html/labs/${lab}_requests.txt"
+done
 
-# Set proper permissions
+# Set proper permissions for labs directory and files
 chown -R www-data:www-data /var/www/html/labs
 chmod -R 777 /var/www/html/labs
 chmod 666 /var/www/html/labs/*.txt
@@ -19,6 +17,12 @@ chmod 666 /var/www/html/labs/*.txt
 mkdir -p /var/www/html/logs
 chown -R www-data:www-data /var/www/html/logs
 chmod -R 777 /var/www/html/logs
+
+# Ensure all PHP files in labs directory are executable
+find /var/www/html/labs -name "*.php" -type f -exec chmod 755 {} \;
+
+# Ensure all directories are traversable
+find /var/www/html -type d -exec chmod 755 {} \;
 
 # Start Apache
 exec apache2-foreground 

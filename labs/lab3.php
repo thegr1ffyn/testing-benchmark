@@ -24,7 +24,7 @@ $result_message = '';
 $session_data = null;
 
 // Function to validate input (similar to Less-21)
-function check_input($value) {
+function check_input($value, $con) {
     if (!empty($value)) {
         $value = substr($value, 0, 20); // truncation
     }
@@ -39,28 +39,44 @@ function check_input($value) {
     return $value;
 }
 
+// Function to safely log requests
+function log_request($message) {
+    $log_file = __DIR__ . '/lab3_requests.txt';
+    // Ensure the log file exists and is writable
+    if (!file_exists($log_file)) {
+        touch($log_file);
+        chmod($log_file, 0666);
+    }
+    
+    if (is_writable($log_file)) {
+        $fp = fopen($log_file, 'a');
+        if ($fp) {
+            fwrite($fp, $message . "\n");
+            fclose($fp);
+        }
+    }
+}
+
 // Handle session creation
 if (isset($_POST['create_username']) && isset($_POST['create_password'])) {
-    $create_uname = check_input($_POST['create_username']);
-    $create_passwd = check_input($_POST['create_password']);
+    $create_uname = check_input($_POST['create_username'], $con);
+    $create_passwd = check_input($_POST['create_password'], $con);
     
     // Log the request for analysis
-    $fp = fopen('lab3_requests.txt', 'a');
-    fwrite($fp, 'Create Session - Username: ' . $_POST['create_username'] . " - Password: " . $_POST['create_password'] . " - User: " . $username . " - Time: " . date('Y-m-d H:i:s') . "\n");
-    fclose($fp);
+    log_request('Create Session - Username: ' . $_POST['create_username'] . " - Password: " . $_POST['create_password'] . " - User: " . $username . " - Time: " . date('Y-m-d H:i:s'));
     
     $sql = "SELECT users.username, users.password FROM users WHERE users.username=$create_uname and users.password=$create_passwd ORDER BY users.id DESC LIMIT 0,1";
-            $result = mysqli_query($con, $sql);
+    $result = mysqli_query($con, $sql);
+    if ($result) {
         $row = mysqli_fetch_array($result);
-    
-    if ($row) {
-        setcookie('session_user', base64_encode($row['username']), time() + 3600);
-        $result_message = 'User session initialized successfully! Authentication token has been generated.';
-        header('Location: lab3.php');
-        exit();
-    } else {
-        $result_message = 'Session initialization failed. Invalid user credentials provided.';
+        if ($row) {
+            setcookie('session_user', base64_encode($row['username']), time() + 3600);
+            $result_message = 'User session initialized successfully! Authentication token has been generated.';
+            header('Location: lab3.php');
+            exit();
+        }
     }
+    $result_message = 'Session initialization failed. Invalid user credentials provided.';
 }
 
 // Handle session deletion
@@ -76,16 +92,14 @@ if (isset($_COOKIE['session_user'])) {
     $decoded_user = base64_decode($session_cookie);
     
     // Log the cookie access
-    $fp = fopen('lab3_requests.txt', 'a');
-    fwrite($fp, 'Cookie Access - Cookie: ' . $session_cookie . " - Decoded: " . $decoded_user . " - User: " . $username . " - Time: " . date('Y-m-d H:i:s') . "\n");
-    fclose($fp);
+    log_request('Cookie Access - Cookie: ' . $session_cookie . " - Decoded: " . $decoded_user . " - User: " . $username . " - Time: " . date('Y-m-d H:i:s'));
     
     // Vulnerable SQL query (same as Less-21)
     $sql = "SELECT * FROM users WHERE username=('$decoded_user') LIMIT 0,1";
-            $result = mysqli_query($con, $sql);
-        
-        if ($result) {
-            $session_data = mysqli_fetch_array($result);
+    $result = mysqli_query($con, $sql);
+    
+    if ($result) {
+        $session_data = mysqli_fetch_array($result);
     }
 }
 ?>

@@ -177,6 +177,7 @@ $username = $user['username'];
                     $minutes = floor(($remaining_time % 3600) / 60);
                     echo '<p style="color: #666; font-size: 14px; margin-top: 15px;">Session expires in: ' . 
                          ($hours > 0 ? $hours . 'h ' : '') . $minutes . 'm</p>';
+                    echo '<p style="margin-top: 10px;"><a href="session_debug.php" style="color: #667eea; text-decoration: none; font-size: 14px;">🕐 View Detailed Session Info</a></p>';
                 }
             }
             ?>
